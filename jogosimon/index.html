@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simon Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Botão de voltar -->
+    <button class="back-button" onclick="goBack()">Voltar</button>
+
+    <div class="container">
+        <h1>Simon Game</h1>
+        <div id="game-board">
+            <div class="color" id="green"></div>
+            <div class="color" id="red"></div>
+            <div class="color" id="yellow"></div>
+            <div class="color" id="blue"></div>
+        </div>
+        <button id="start-game">Start Game</button>
+        <h2 id="message">Press Start to Play</h2>
+
+        <!-- Tabela de Ranking -->
+        <div class="ranking-container">
+            <h2>Ranking</h2>
+            <table id="ranking-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Pontuação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- O ranking será gerado dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function goBack() {
+            window.location.href = "cadastro.html"; // Redireciona para a página de cadastro
+        }
+
+        let score = 0; // Pontuação inicial do jogador
+        let playerName = localStorage.getItem('playerName'); // Pega o nome do jogador cadastrado
+        let sequence = []; // Sequência de cores gerada pelo jogo
+        let playerInput = []; // Entradas do jogador
+        let level = 0; // Nível do jogo
+        let gameStarted = false; // Indica se o jogo começou
+
+        // Função para salvar e atualizar o ranking no localStorage
+        function updateRanking() {
+            let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+            let existingPlayer = ranking.find(player => player.name === playerName);
+
+            if (existingPlayer) {
+                if (score > existingPlayer.score) {
+                    existingPlayer.score = score; // Atualiza se a nova pontuação for maior
+                }
+            } else {
+                ranking.push({ name: playerName, score: score }); // Adiciona ao ranking
+            }
+
+            ranking.sort((a, b) => b.score - a.score); // Ordena o ranking pela maior pontuação
+            localStorage.setItem('ranking', JSON.stringify(ranking)); // Armazena o ranking atualizado
+        }
+
+        // Função para exibir o ranking na tabela
+        function displayRanking() {
+            let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+            const rankingTableBody = document.getElementById('ranking-table').getElementsByTagName('tbody')[0];
+            rankingTableBody.innerHTML = ''; // Limpa a tabela antes de preenchê-la
+
+            ranking.forEach(player => {
+                let row = rankingTableBody.insertRow();
+                let cellName = row.insertCell(0);
+                let cellScore = row.insertCell(1);
+                cellName.textContent = player.name;
+                cellScore.textContent = player.score;
+            });
+        }
+
+        // Inicia o jogo
+        function startGame() {
+            sequence = [];
+            playerInput = [];
+            level = 0;
+            score = 0;
+            gameStarted = true;
+            nextSequence();
+        }
+
+        // Gera a próxima sequência
+        function nextSequence() {
+            playerInput = [];
+            level++;
+            document.getElementById('message').textContent = `Level ${level}`;
+            const colors = ['green', 'red', 'yellow', 'blue'];
+            const randomColor = colors[Math.floor(Math.random() * 4)];
+            sequence.push(randomColor);
+            playSequence();
+        }
+
+        // Toca a sequência de cores
+        function playSequence() {
+            sequence.forEach((color, index) => {
+                setTimeout(() => {
+                    flashColor(color);
+                }, index * 1000);
+            });
+            setTimeout(() => {
+                enableClick(); // Habilita a entrada do jogador
+            }, sequence.length * 1000);
+        }
+
+        // Função para o jogador clicar nas cores
+        function enableClick() {
+            const colors = document.querySelectorAll('.color');
+            colors.forEach(color => {
+                color.addEventListener('click', handlePlayerClick);
+            });
+        }
+
+        // Lida com os cliques do jogador
+        function handlePlayerClick(event) {
+            if (!gameStarted) return;
+
+            const color = event.target.id;
+            flashColor(color);
+            playerInput.push(color);
+
+            // Verifica se a entrada do jogador está correta
+            checkInput(playerInput.length - 1);
+        }
+
+        // Verifica a entrada do jogador
+        function checkInput(currentLevel) {
+            if (playerInput[currentLevel] === sequence[currentLevel]) {
+                if (playerInput.length === sequence.length) {
+                    score += level; // Atualiza a pontuação
+                    setTimeout(nextSequence, 1000); // Inicia a próxima sequência
+                }
+            } else {
+                document.getElementById('message').textContent = 'Game Over! Press Start to Play Again.';
+                gameStarted = false;
+                updateRanking(); // Atualiza o ranking
+                displayRanking(); // Exibe o ranking atualizado
+            }
+        }
+
+        // Função para piscar as cores
+        function flashColor(color) {
+            const colorDiv = document.getElementById(color);
+            colorDiv.classList.add('active');
+            setTimeout(() => {
+                colorDiv.classList.remove('active');
+            }, 300);
+        }
+
+        // Adiciona o evento para iniciar o jogo
+        document.getElementById('start-game').addEventListener('click', startGame);
+
+        // Exibe o ranking ao carregar a página
+        window.onload = function() {
+            displayRanking();
+        };
+    </script>
+</body>
+</html>
